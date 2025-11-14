@@ -3,77 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>警務專用：全能圖片格式轉換器 v1.1</title>
+    <title>警務專用：圖片轉檔與縮放助手 v2.0</title>
     
     <script src="https://unpkg.com/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
-        body { font-family: "Microsoft JhengHei", "Segoe UI", sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding-top: 40px; color: #333; }
-        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); width: 650px; text-align: center; position: relative; }
+        body { font-family: "Microsoft JhengHei", "Segoe UI", sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding-top: 30px; color: #333; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); width: 700px; text-align: center; }
         h2 { color: #2c3e50; margin-bottom: 5px; font-weight: bold; }
         .version { font-size: 0.8em; color: #95a5a6; margin-bottom: 15px; display: block; }
-        .desc { color: #7f8c8d; font-size: 0.95em; line-height: 1.6; margin-bottom: 25px; }
+        .desc { color: #7f8c8d; font-size: 0.95em; line-height: 1.6; margin-bottom: 20px; }
         
         /* 上傳區 */
         .upload-area {
-            border: 3px dashed #bdc3c7; border-radius: 10px; padding: 40px;
+            border: 3px dashed #bdc3c7; border-radius: 10px; padding: 30px;
             cursor: pointer; transition: 0.3s; background-color: #f9f9f9;
         }
         .upload-area:hover { background-color: #eaf2f8; border-color: #3498db; }
-        .upload-icon { font-size: 3em; color: #3498db; margin-bottom: 10px; }
+        .upload-icon { font-size: 2.5em; color: #3498db; margin-bottom: 5px; }
         #fileInput { display: none; }
         .support-list { font-size: 0.85em; color: #95a5a6; margin-top: 10px; }
 
-        /* 按鈕群組 */
-        .btn-group { margin-top: 25px; display: none; justify-content: center; gap: 10px; }
+        /* 檔案列表 */
+        .file-list { text-align: left; margin-top: 15px; max-height: 120px; overflow-y: auto; 
+                     font-size: 0.9em; color: #555; border: 1px solid #eee; padding: 10px; border-radius: 5px; display: none;}
+
+        /* 按鈕群組 (雙排設計) */
+        .action-area { margin-top: 25px; display: none; flex-direction: column; gap: 15px; }
+        .mode-group { display: flex; gap: 15px; justify-content: center; }
+        
         .btn {
-            color: white; border: none; padding: 12px 30px; font-size: 1em; 
-            border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s;
+            color: white; border: none; padding: 15px 20px; font-size: 1em; 
+            border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            transition: 0.2s; flex: 1; display: flex; flex-direction: column; align-items: center;
         }
-        .btn-primary { background-color: #27ae60; }
-        .btn-primary:hover { background-color: #219150; transform: translateY(-2px); }
-        .btn-secondary { background-color: #7f8c8d; }
-        .btn-secondary:hover { background-color: #636e72; }
+        .btn span { font-size: 0.8em; opacity: 0.9; margin-top: 5px; font-weight: normal; }
+        .btn-landscape { background-color: #2980b9; }
+        .btn-landscape:hover { background-color: #21618c; transform: translateY(-2px); }
+        
+        .btn-portrait { background-color: #e67e22; }
+        .btn-portrait:hover { background-color: #ca6f1e; transform: translateY(-2px); }
+
+        .btn-reset { background-color: #95a5a6; width: 100%; margin-top: 5px; padding: 10px; }
+        .btn-reset:hover { background-color: #7f8c8d; }
+        
         .btn:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
 
         /* 進度條 */
-        .progress-container { margin-top: 25px; display: none; }
-        .progress-bar { width: 100%; background-color: #ecf0f1; border-radius: 10px; overflow: hidden; height: 25px; }
-        .progress-fill { height: 100%; width: 0%; background-color: #3498db; transition: width 0.3s; }
-        .status-text { margin-top: 8px; font-size: 0.95em; color: #555; font-weight: bold; }
-
-        /* 檔案列表 */
-        .file-list { text-align: left; margin-top: 20px; max-height: 150px; overflow-y: auto; 
-                     font-size: 0.9em; color: #555; border: 1px solid #eee; padding: 10px; border-radius: 5px; display: none;}
+        .progress-container { margin-top: 20px; display: none; }
+        .progress-bar { width: 100%; background-color: #ecf0f1; border-radius: 10px; overflow: hidden; height: 20px; }
+        .progress-fill { height: 100%; width: 0%; background-color: #27ae60; transition: width 0.3s; }
+        .status-text { margin-top: 8px; font-size: 0.9em; color: #555; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🚔 警務專用：全能圖片轉檔助手</h2>
-    <span class="version">v1.1 | By Police Helper</span>
+    <h2>🚔 警務專用：圖片轉檔與縮放助手</h2>
+    <span class="version">v2.0 | 含尺寸自動縮放 (220 DPI)</span>
     <p class="desc">
-        將各類證據截圖、手機照片統一轉換為標準 <b>JPG</b> 格式。<br>
-        <span style="color: #27ae60; font-weight: bold;">⚡ 智慧優化：若原檔已是 JPG，直接打包不失真。</span><br>
+        自動將 HEIC/PNG/WebP 等格式轉為 JPG，並同時調整像素大小。<br>
         <span style="color: #e74c3c; font-weight: bold;">🔒 資安保證：全本機離線運算，無資料外洩風險。</span>
     </p>
 
     <div class="upload-area" onclick="document.getElementById('fileInput').click()">
         <div class="upload-icon">📂</div>
         <p>點擊選取 或 拖曳檔案至此</p>
-        <div class="support-list">支援格式：HEIC, PNG, BMP, WebP, AVIF, GIF, JPG</div>
+        <div class="support-list">支援格式：HEIC, PNG, BMP, WebP, JPG...</div>
     </div>
     
-    <input type="file" id="fileInput" multiple 
-           accept="image/jpeg, image/png, image/webp, image/bmp, image/gif, image/avif, image/heic, image/heif, .heic, .heif">
+    <input type="file" id="fileInput" multiple accept="image/*, .heic">
 
     <div class="file-list" id="fileList"></div>
 
-    <div class="btn-group" id="btnGroup">
-        <button id="convertBtn" class="btn btn-primary">🚀 開始轉換並下載</button>
-        <button id="resetBtn" class="btn btn-secondary">🔄 清空重置</button>
+    <div class="action-area" id="actionArea">
+        <div class="mode-group">
+            <button id="btnLandscape" class="btn btn-landscape">
+                📁 處理：一般照片
+                <span>目標：13.5 x 8 cm (橫式)</span>
+            </button>
+            <button id="btnPortrait" class="btn btn-portrait">
+                📱 處理：手機截圖
+                <span>目標：8 x 17 cm (直式)</span>
+            </button>
+        </div>
+        <button id="btnReset" class="btn btn-reset">🔄 清空重置</button>
     </div>
 
     <div class="progress-container" id="progressArea">
@@ -83,11 +99,21 @@
 </div>
 
 <script>
+    // === 設定區 (220 DPI) ===
+    const DPI = 220;
+    // 一般照片 (13.5 x 8 cm)
+    const LANDSCAPE_W = Math.round((13.5 / 2.54) * DPI); // ~1169 px
+    const LANDSCAPE_H = Math.round((8 / 2.54) * DPI);    // ~693 px
+    // 手機截圖 (8 x 17 cm)
+    const PORTRAIT_W = Math.round((8 / 2.54) * DPI);     // ~693 px
+    const PORTRAIT_H = Math.round((17 / 2.54) * DPI);    // ~1472 px
+
     const fileInput = document.getElementById('fileInput');
     const fileList = document.getElementById('fileList');
-    const btnGroup = document.getElementById('btnGroup');
-    const convertBtn = document.getElementById('convertBtn');
-    const resetBtn = document.getElementById('resetBtn');
+    const actionArea = document.getElementById('actionArea');
+    const btnLandscape = document.getElementById('btnLandscape');
+    const btnPortrait = document.getElementById('btnPortrait');
+    const btnReset = document.getElementById('btnReset');
     const progressArea = document.getElementById('progressArea');
     const progressBar = document.getElementById('progressBar');
     const statusText = document.getElementById('statusText');
@@ -113,35 +139,41 @@
         fileList.style.display = 'block';
         fileList.innerHTML = `<b>已就緒 ${selectedFiles.length} 個檔案：</b><br>` + 
                              selectedFiles.map(f => `• ${f.name} (${(f.size/1024).toFixed(1)} KB)`).join('<br>');
-        btnGroup.style.display = 'flex';
+        actionArea.style.display = 'flex';
         progressArea.style.display = 'none';
-        convertBtn.disabled = false;
-        convertBtn.innerText = "🚀 開始轉換並下載";
+        enableButtons(true);
     }
 
-    // 重置按鈕
-    resetBtn.addEventListener('click', () => {
+    // 重置
+    btnReset.addEventListener('click', () => {
         selectedFiles = [];
-        fileInput.value = ''; // 清空 input
+        fileInput.value = '';
         fileList.style.display = 'none';
         fileList.innerHTML = '';
-        btnGroup.style.display = 'none';
+        actionArea.style.display = 'none';
         progressArea.style.display = 'none';
         statusText.innerText = '';
         progressBar.style.width = '0%';
     });
 
-    // 轉換按鈕
-    convertBtn.addEventListener('click', async () => {
+    // 按鈕事件綁定
+    btnLandscape.addEventListener('click', () => startProcess(LANDSCAPE_W, LANDSCAPE_H, "一般照片"));
+    btnPortrait.addEventListener('click', () => startProcess(PORTRAIT_W, PORTRAIT_H, "手機截圖"));
+
+    function enableButtons(enabled) {
+        btnLandscape.disabled = !enabled;
+        btnPortrait.disabled = !enabled;
+        btnReset.disabled = !enabled;
+    }
+
+    // 主處理流程
+    async function startProcess(maxW, maxH, modeName) {
         if (selectedFiles.length === 0) return;
 
-        convertBtn.disabled = true;
-        resetBtn.disabled = true;
+        enableButtons(false);
         progressArea.style.display = 'block';
         const zip = new JSZip();
-        const imgFolder = zip.folder("Standardized_JPGs");
-        
-        // 用來記錄檔名，防止重複 (v1.1 新增)
+        const imgFolder = zip.folder(modeName + "_Processed");
         const usedNames = new Set();
 
         let processedCount = 0;
@@ -149,16 +181,17 @@
 
         for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
-            const isJpg = file.type === 'image/jpeg' || file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg');
-            const actionText = isJpg ? "直接打包" : "轉換中";
-            
-            statusText.innerText = `[${actionText}] (${i + 1}/${selectedFiles.length}): ${file.name}...`;
+            statusText.innerText = `正在處理 (${i + 1}/${selectedFiles.length}): ${file.name}...`;
             updateProgress((i / selectedFiles.length) * 90);
 
             try {
-                const jpgBlob = await convertToJpg(file);
+                // 1. 統一轉成 JPG Blob (如果是 HEIC 會先解碼)
+                const sourceBlob = await getJpgBlob(file);
                 
-                // --- 檔名防重複處理 (v1.1) ---
+                // 2. 調整尺寸 (Resize)
+                const resizedBlob = await resizeImage(sourceBlob, maxW, maxH);
+
+                // 3. 檔名防重複
                 let baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
                 let newName = baseName + ".jpg";
                 let counter = 1;
@@ -167,67 +200,89 @@
                     counter++;
                 }
                 usedNames.add(newName);
-                // ---------------------------
 
-                imgFolder.file(newName, jpgBlob);
+                imgFolder.file(newName, resizedBlob);
+
             } catch (err) {
-                console.error(err);
+                console.error("失敗:", file.name, err);
                 failCount++;
             }
             processedCount++;
         }
 
-        statusText.innerText = "正在壓縮打包...";
+        statusText.innerText = "正在打包下載...";
         updateProgress(95);
         
         zip.generateAsync({ type: "blob" }).then(function (content) {
             const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
-            saveAs(content, `警務轉檔完成_${timestamp}.zip`);
+            saveAs(content, `警務照片_${modeName}_${timestamp}.zip`);
             updateProgress(100);
             
             let finalMsg = `✅ 完成！成功 ${processedCount - failCount} 張`;
             if (failCount > 0) finalMsg += `，失敗 ${failCount} 張`;
             statusText.innerText = finalMsg;
             
-            convertBtn.innerText = "下載完成";
-            resetBtn.disabled = false; // 開放重置
+            enableButtons(true);
         });
-    });
+    }
 
     function updateProgress(percent) { progressBar.style.width = percent + "%"; }
 
-    async function convertToJpg(file) {
-        // 智慧略過 JPG
-        if (file.type === 'image/jpeg' || file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) {
-            return file;
-        }
-
-        // HEIC 處理
+    // 階段一：取得原始圖片的 JPG Blob (處理格式問題)
+    async function getJpgBlob(file) {
+        // 如果是 HEIC
         if (file.name.toLowerCase().endsWith('.heic') || file.type === 'image/heic') {
             try {
-                const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+                const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.95 });
                 return Array.isArray(blob) ? blob[0] : blob;
-            } catch (e) { throw new Error("HEIC 失敗"); }
+            } catch (e) { throw new Error("HEIC 解碼失敗"); }
         }
-        
-        // 通用 Canvas 處理
+        return file; // 其他格式直接回傳，待 Canvas 處理
+    }
+
+    // 階段二：透過 Canvas 調整尺寸 (Resize & Pixel Resampling)
+    function resizeImage(fileBlob, targetMaxW, targetMaxH) {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            const url = URL.createObjectURL(file);
+            const url = URL.createObjectURL(fileBlob);
+
             img.onload = () => {
+                // 計算縮放比例 (Best Fit / Contain)
+                // 邏輯：找出能讓圖片完全塞入目標框框的最大比例
+                let ratio = Math.min(targetMaxW / img.width, targetMaxH / img.height);
+                
+                // 如果圖片本來就比目標小，是否要放大？ 
+                // 建議：保持原大小或放大皆可。這裡採用「不放大超過原圖太誇張，但若大於目標則縮小」
+                // 為了統一格式，我們強制縮放到目標框框內 (若原圖很小則不放大)
+                if (ratio > 1) ratio = 1; 
+
+                const newW = Math.round(img.width * ratio);
+                const newH = Math.round(img.height * ratio);
+
                 const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
+                canvas.width = newW;
+                canvas.height = newH;
                 const ctx = canvas.getContext('2d');
-                ctx.fillStyle = "#FFFFFF"; // 白底
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
+
+                // 白底 (處理透明圖)
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, newW, newH);
+                
+                // 繪製並縮放 (高品質)
+                ctx.drawImage(img, 0, 0, newW, newH);
+
                 canvas.toBlob((blob) => {
                     URL.revokeObjectURL(url);
-                    blob ? resolve(blob) : reject(new Error("Canvas 失敗"));
-                }, 'image/jpeg', 0.92);
+                    if (blob) resolve(blob);
+                    else reject(new Error("Canvas 輸出錯誤"));
+                }, 'image/jpeg', 0.92); // 92% 品質 JPG
             };
-            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("載入失敗")); };
+
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error("圖片載入失敗"));
+            };
+
             img.src = url;
         });
     }
