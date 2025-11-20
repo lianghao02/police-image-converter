@@ -3,142 +3,358 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>警務專用：圖片轉檔助手 v3.0 (通用版)</title>
+    <title>警務專用：圖片轉檔助手 v3.1</title>
+    
     <script src="https://unpkg.com/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding-top: 30px; color: #333; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); width: 700px; text-align: center; }
-        .upload-area { border: 3px dashed #bdc3c7; border-radius: 10px; padding: 40px; cursor: pointer; background-color: #f9f9f9; margin-bottom: 20px;}
-        .upload-area:hover { border-color: #3498db; }
-        .btn { color: white; border: none; padding: 15px 40px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1.1em; font-weight: bold; background-color: #2980b9; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s;}
-        .btn:hover { background-color: #21618c; transform: translateY(-2px); }
-        .btn:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #e67e22;
+            --danger-color: #c0392b;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            padding-top: 40px;
+            color: #333;
+            margin: 0;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 700px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        h2 { color: var(--primary-color); margin: 0 0 10px 0; font-size: 28px; font-weight: 700; }
+        .badge { background: var(--accent-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; vertical-align: middle; margin-left: 10px; }
+        .desc { color: #7f8c8d; font-size: 0.95em; margin-bottom: 30px; line-height: 1.5; }
+
+        /* 設定區塊 */
+        .settings-panel {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
         
-        .settings-area { margin-bottom: 20px; padding: 15px; background-color: #ecf0f1; border-radius: 8px; text-align: left; display: flex; align-items: center; gap: 15px;}
-        .settings-area select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; flex: 1; }
+        .settings-panel label { font-weight: bold; color: var(--primary-color); display: flex; align-items: center; gap: 8px; }
+        .settings-panel select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+            width: 60%;
+        }
+
+        /* 上傳區塊 */
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 40px;
+            cursor: pointer;
+            background-color: #ffffff;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-area:hover { border-color: var(--accent-color); background-color: #ebf8ff; transform: translateY(-2px); }
+        .upload-area.active { border-color: var(--success-color); background-color: #f0fff4; }
         
+        .upload-icon { font-size: 48px; color: var(--accent-color); margin-bottom: 10px; }
+        .upload-text { font-size: 18px; color: #4a5568; font-weight: 500; }
+        .upload-subtext { font-size: 13px; color: #a0aec0; margin-top: 5px; }
+
         #fileInput { display: none; }
-        .file-list { text-align: left; margin-bottom: 15px; max-height: 120px; overflow-y: auto; display: none; padding: 10px; border: 1px solid #eee; border-radius: 5px;}
-        .progress-bar { width: 100%; background: #ecf0f1; height: 20px; border-radius: 10px; overflow: hidden; margin-top: 20px; display: none;}
-        .progress-fill { height: 100%; width: 0%; background: #27ae60; transition: width 0.3s; }
-        #statusText { margin-top: 8px; font-size: 0.9em; font-weight: bold; color: #555; }
+
+        /* 檔案列表 */
+        .file-list-container {
+            margin-top: 20px;
+            text-align: left;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+        }
+        .file-item { font-size: 13px; padding: 5px 0; border-bottom: 1px solid #f0f0f0; color: #555; display: flex; justify-content: space-between; }
+        .file-item:last-child { border-bottom: none; }
+
+        /* 按鈕群組 */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            opacity: 0.6; /* 預設禁用狀態 */
+            pointer-events: none;
+        }
+
+        .btn.active { opacity: 1; pointer-events: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn:active { transform: translateY(1px); box-shadow: none; }
+
+        .btn-primary { background-color: var(--success-color); color: white; }
+        .btn-primary:hover { background-color: #219150; }
+
+        .btn-warning { background-color: var(--warning-color); color: white; display: none; } /* 預設隱藏 */
+        .btn-warning:hover { background-color: #d35400; }
+
+        .btn-danger { background-color: var(--danger-color); color: white; flex: 0.5; }
+        .btn-danger:hover { background-color: #a93226; }
+
+        /* 進度條 */
+        .progress-container { margin-top: 25px; display: none; }
+        .progress-bar-bg { width: 100%; background-color: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background-color: var(--accent-color); transition: width 0.3s ease; border-radius: 5px; }
+        .status-text { margin-top: 10px; font-size: 14px; color: #4a5568; font-weight: 600; }
+
     </style>
 </head>
 <body>
+
 <div class="container">
-    <h2>🚔 警務專用：圖片轉檔助手 v3.0</h2>
-    <span style="font-size: 0.8em; color: #95a5a6; display:block; margin-bottom: 20px;">通用縮放版：只處理畫質與格式，尺寸交由 Excel 決定</span>
-    
-    <div class="settings-area">
-        <label>🖨️ 輸出畫質 (DPI)：</label>
+    <h2>🚔 警務專用圖片轉檔助手 <span class="badge">v3.1</span></h2>
+    <p class="desc">全本機離線運算，支援 HEIC/PNG/WebP 轉 JPG。<br>自動優化畫質與尺寸，專為 Excel 自動化系統設計。</p>
+
+    <div class="settings-panel">
+        <label>🖨️ 輸出畫質 (DPI)</label>
         <select id="dpiSelect">
-            <option value="96">96 DPI (螢幕用，檔案最小)</option>
-            <option value="150">150 DPI (一般文件，平衡)</option>
-            <option value="220" selected>220 DPI (標準列印，推薦)</option>
-            <option value="300">300 DPI (高畫質，檔案較大)</option>
+            <option value="96">96 DPI (螢幕用 - 檔案最小)</option>
+            <option value="150">150 DPI (一般文件 - 平衡)</option>
+            <option value="220" selected>220 DPI (標準列印 - 推薦)</option>
+            <option value="300">300 DPI (高畫質 - 檔案較大)</option>
         </select>
     </div>
 
-    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-        <div style="font-size: 3em; color: #3498db; margin-bottom: 10px;">📂</div>
-        <p>點擊選取 或 拖曳照片至此<br><small>(支援 HEIC / PNG / WebP / JPG 混選)</small></p>
+    <div class="upload-area" id="dropArea" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">📂</div>
+        <div class="upload-text">點擊選取 或 拖曳照片至此</div>
+        <div class="upload-subtext">支援 JPG, HEIC, PNG, BMP, WebP (可多選)</div>
     </div>
     <input type="file" id="fileInput" multiple accept="image/*, .heic">
-    
-    <div class="file-list" id="fileList"></div>
 
-    <button id="convertBtn" class="btn" style="display:none;">🚀 開始轉換並下載 ZIP</button>
+    <div class="file-list-container" id="fileList"></div>
 
-    <div class="progress-bar" id="progressArea"><div class="progress-fill" id="progressBar"></div></div>
-    <p id="statusText"></p>
+    <div class="btn-group">
+        <button id="btnConvert" class="btn btn-primary">
+            <span>🚀 開始轉換</span>
+        </button>
+        <button id="btnReconvert" class="btn btn-warning">
+            <span>🔄 重新轉換</span>
+        </button>
+        <button id="btnClear" class="btn btn-danger">
+            <span>🗑️ 清除重置</span>
+        </button>
+    </div>
+
+    <div class="progress-container" id="progressArea">
+        <div class="progress-bar-bg"><div class="progress-fill" id="progressBar"></div></div>
+        <p class="status-text" id="statusText">準備就緒</p>
+    </div>
 </div>
 
 <script>
     const fileInput = document.getElementById('fileInput');
-    const convertBtn = document.getElementById('convertBtn');
+    const fileListContainer = document.getElementById('fileList');
+    const dropArea = document.getElementById('dropArea');
+    
+    const btnConvert = document.getElementById('btnConvert');
+    const btnReconvert = document.getElementById('btnReconvert');
+    const btnClear = document.getElementById('btnClear');
+    
     const progressArea = document.getElementById('progressArea');
     const progressBar = document.getElementById('progressBar');
     const statusText = document.getElementById('statusText');
     const dpiSelect = document.getElementById('dpiSelect');
-    const fileList = document.getElementById('fileList');
+    
     let selectedFiles = [];
 
-    // 拖曳支援
-    const dropArea = document.querySelector('.upload-area');
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, e => {e.preventDefault(); e.stopPropagation();}, false));
-    dropArea.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); handleFiles(e.dataTransfer.files); }, false);
-    fileInput.addEventListener('change', e => handleFiles(e.target.files));
+    // --- 事件監聽 ---
+
+    // 拖曳效果
+    ['dragenter', 'dragover'].forEach(e => {
+        dropArea.addEventListener(e, (ev) => {
+            ev.preventDefault(); dropArea.classList.add('active');
+        });
+    });
+    ['dragleave', 'drop'].forEach(e => {
+        dropArea.addEventListener(e, (ev) => {
+            ev.preventDefault(); dropArea.classList.remove('active');
+        });
+    });
+    dropArea.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+    // 按鈕事件
+    btnConvert.addEventListener('click', () => startProcess());
+    
+    // 重新轉換：其實就是重跑一次 startProcess，但通常用於使用者改了 DPI 後想重跑
+    btnReconvert.addEventListener('click', () => {
+        if(confirm("確定要使用新的設定重新轉換一次嗎？")) {
+            startProcess();
+        }
+    });
+
+    // 清除重置
+    btnClear.addEventListener('click', () => {
+        selectedFiles = [];
+        fileInput.value = '';
+        fileListContainer.style.display = 'none';
+        fileListContainer.innerHTML = '';
+        progressArea.style.display = 'none';
+        statusText.innerText = '';
+        progressBar.style.width = '0%';
+        
+        // 按鈕狀態還原
+        btnConvert.classList.remove('active');
+        btnClear.classList.remove('active');
+        btnReconvert.style.display = 'none';
+        btnConvert.style.display = 'flex';
+        btnConvert.innerText = "🚀 開始轉換";
+    });
+
+    // --- 核心邏輯 ---
 
     function handleFiles(files) {
         const newFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.name.toLowerCase().endsWith('.heic'));
-        if (newFiles.length === 0) { alert("無效的圖片！"); return; }
+        if (newFiles.length === 0) { alert("請選取有效的圖片檔案！"); return; }
+        
         selectedFiles = newFiles;
         
-        fileList.style.display = 'block';
-        fileList.innerHTML = `<b>已就緒 ${selectedFiles.length} 個檔案</b><br>` + selectedFiles.map(f => `<small>• ${f.name}</small>`).join('<br>');
-        convertBtn.style.display = 'block';
+        // 更新清單介面
+        fileListContainer.style.display = 'block';
+        fileListContainer.innerHTML = selectedFiles.map(f => 
+            `<div class="file-item"><span>${f.name}</span><span>${(f.size/1024).toFixed(1)} KB</span></div>`
+        ).join('');
+        
+        // 啟用按鈕
+        btnConvert.classList.add('active');
+        btnClear.classList.add('active');
+        btnReconvert.style.display = 'none'; // 隱藏重新轉換
+        btnConvert.style.display = 'flex';     // 顯示開始轉換
         progressArea.style.display = 'none';
-        statusText.innerText = '';
     }
 
-    convertBtn.addEventListener('click', async () => {
+    async function startProcess() {
+        if (selectedFiles.length === 0) return;
+        
         const dpi = parseInt(dpiSelect.value);
-        // 設定最大長邊限制：以 A4 寬度約 20cm 為基準，確保任何縮放都不會模糊
-        // 220 DPI 時約為 1732 px
-        const maxLongSide = Math.round((20 / 2.54) * dpi);
+        const maxLongSide = Math.round((20 / 2.54) * dpi); // 20cm 為基準
 
-        convertBtn.disabled = true;
+        // 鎖定介面
+        btnConvert.classList.remove('active');
+        btnReconvert.classList.remove('active');
+        btnClear.classList.remove('active');
         progressArea.style.display = 'block';
         
         const zip = new JSZip();
         const imgFolder = zip.folder("Processed_Images");
         const usedNames = new Set();
 
+        let processedCount = 0;
+        let failCount = 0;
+
         for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
-            statusText.innerText = `處理中 (${i + 1}/${selectedFiles.length}): ${file.name}`;
-            progressBar.style.width = `${(i / selectedFiles.length) * 90}%`;
+            statusText.innerText = `正在處理 (${i + 1}/${selectedFiles.length})：${file.name}`;
+            progressBar.style.width = `${((i) / selectedFiles.length) * 90}%`;
             
             try {
                 const blob = await processImage(file, maxLongSide);
                 let name = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                
+                // 防重名
                 let counter = 1;
-                while (usedNames.has(name)) { name = name.replace(".jpg", `(${counter}).jpg`); counter++; }
+                let baseName = name;
+                while (usedNames.has(name)) { 
+                    name = baseName.replace(".jpg", `(${counter}).jpg`); 
+                    counter++; 
+                }
                 usedNames.add(name);
+                
                 imgFolder.file(name, blob);
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e); failCount++; 
+            }
+            processedCount++;
         }
 
-        statusText.innerText = "打包下載中...";
+        statusText.innerText = "正在壓縮打包 ZIP...";
         progressBar.style.width = "100%";
-        const content = await zip.generateAsync({ type: "blob" });
-        saveAs(content, `警務照片_通用_${dpi}DPI.zip`);
         
-        statusText.innerText = "✅ 完成！";
-        convertBtn.disabled = false;
-        convertBtn.innerText = "處理下一批";
-        selectedFiles = []; // 清空
-    });
+        const content = await zip.generateAsync({ type: "blob" });
+        const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
+        saveAs(content, `警務照片_${dpi}DPI_${timestamp}.zip`);
+        
+        // 完成狀態
+        statusText.innerText = `✅ 完成！成功 ${processedCount - failCount} 張` + (failCount > 0 ? ` (失敗 ${failCount})` : "");
+        
+        // 切換按鈕狀態
+        btnConvert.style.display = 'none';    // 隱藏開始按鈕
+        btnReconvert.style.display = 'flex';  // 顯示重新轉換
+        
+        btnReconvert.classList.add('active');
+        btnClear.classList.add('active');
+    }
 
     async function processImage(file, maxLongSide) {
+        // 1. 智慧略過 JPG (如果不需調整大小，可直接回傳原檔，但為了統一 DPI，這裡建議還是重繪)
+        // 如果您希望 JPG 原圖直出，請取消下面註解：
+        /*
+        if (file.type === 'image/jpeg' || file.name.toLowerCase().endsWith('.jpg')) {
+             return file;
+        }
+        */
+
         let srcBlob = file;
         // HEIC 解碼
         if (file.name.toLowerCase().endsWith('.heic') || file.type === 'image/heic') {
-            const heicBlob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+            const heicBlob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
             srcBlob = Array.isArray(heicBlob) ? heicBlob[0] : heicBlob;
         }
         
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
-                // 通用縮放邏輯：限制「長邊」不超過 maxLongSide
                 let ratio = 1;
-                if (img.width > img.height) {
-                    if (img.width > maxLongSide) ratio = maxLongSide / img.width;
-                } else {
-                    if (img.height > maxLongSide) ratio = maxLongSide / img.height;
+                if (Math.max(img.width, img.height) > maxLongSide) {
+                    ratio = maxLongSide / Math.max(img.width, img.height);
                 }
                 
                 const w = Math.round(img.width * ratio);
@@ -148,16 +364,14 @@
                 canvas.width = w; canvas.height = h;
                 const ctx = canvas.getContext('2d');
                 
-                // 白底 (去背)
+                // 白底去背
                 ctx.fillStyle = "#FFFFFF";
                 ctx.fillRect(0, 0, w, h);
                 ctx.drawImage(img, 0, 0, w, h);
                 
-                // 若原圖就是 JPG 且尺寸已符合，這段 Canvas 重繪其實可以優化跳過
-                // 但為了統一去背與清除 EXIF，建議還是重繪一次
                 canvas.toBlob(resolve, 'image/jpeg', 0.92);
             };
-            img.onerror = () => reject(new Error("載入失敗"));
+            img.onerror = () => reject(new Error("Load failed"));
             img.src = URL.createObjectURL(srcBlob);
         });
     }
